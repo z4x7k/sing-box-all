@@ -1,8 +1,8 @@
 name: Build And Release
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 jobs:
   main:
     timeout-minutes: 90
@@ -13,46 +13,28 @@ jobs:
     container:
       image: docker.io/library/golang:1-alpine
     steps:
-      # - name: Checkout
-      #   uses: actions/checkout@v3
-      #   with:
-      #     fetch-depth: 0
-      # - name: Setup Docker Buildx
-      #   uses: docker/setup-buildx-action@v2
-      #   with:
-      #     platforms: linux/amd64
-      # - name: Docker Image Build and Push
-      #   id: docker_build_and_push
-      #   uses: docker/build-push-action@v4
-      #   with:
-      #     push: false
-      #     pull: true
-      #     context: .
-      #     file: Dockerfile
-      #     no-cache: true
-      #     tags: tmp:tmp
-      #   timeout-minutes: 20
       - name: Install Dependencies
         run: apk update && apk upgrade && apk add --no-cache gcc musl-dev linux-headers
       - name: Build
-        run: go install github.com/sagernet/sing-box/cmd/sing-box@latest
+        run: |
+          go install github.com/sagernet/sing-box/cmd/sing-box@latest
+          mv "$(go env GOPATH)/bin/sing-box" ./sing-box
         # run: go install -trimpath -buildvcs=false -ldflags "-extldflags '-static' -s -w -buildid=''" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@latest
-      - name: Get Executable Path
-        run: echo "executable=$(go env GOPATH)/bin/sing-box" >> $GITHUB_OUTPUT
         id: get_path
       - name: Compress Executable
-        run: set -ex && wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz -O upx-4.0.2-amd64_linux.tar.xz && tar -xvf upx-4.0.2-amd64_linux.tar.xz upx-4.0.2-amd64_linux/upx && mv ./upx-4.0.2-amd64_linux/upx . && ./upx --no-color --mono --no-progress --ultra-brute --no-backup ${{ steps.get_path.outputs.executable }} && ./upx --test ${{ steps.get_path.outputs.executable }}
+        run: set -ex && wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz -O upx-4.0.2-amd64_linux.tar.xz && tar -xvf upx-4.0.2-amd64_linux.tar.xz upx-4.0.2-amd64_linux/upx && mv ./upx-4.0.2-amd64_linux/upx . && ./upx --no-color --mono --no-progress --ultra-brute --no-backup ./sing-box && ./upx --test ./sing-box
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: sing-box
-          path: ${{ steps.get_path.outputs.executable }}
+          path: ./sing-box
       - name: Generate Release Name
         run: echo "release_name=$(date -u '+%Y/%m/%d %H:%M')" >> $GITHUB_OUTPUT
         id: generate_release_name
       - name: Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           name: ${{ steps.generate_release_name.outputs.release_name }}"
           prerelease: false
-          files: ${{ steps.get_path.outputs.executable }}
+          files: ./sing-box
