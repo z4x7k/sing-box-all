@@ -35,7 +35,10 @@ jobs:
       - name: Install Dependencies
         run: apk update && apk upgrade && apk add --no-cache gcc musl-dev linux-headers
       - name: Build
-        run: go install -trimpath -buildvcs=false -ldflags "-extldflags '-static' -s -w -buildid=''" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@latest
+        run: go install github.com/sagernet/sing-box/cmd/sing-box@latest
+        # run: go install -trimpath -buildvcs=false -ldflags "-extldflags '-static' -s -w -buildid=''" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@latest
+      - name: Debug
+        run: ls -halu; pwd;
       - name: Compress Executable
         run: set -ex && wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz -O upx-4.0.2-amd64_linux.tar.xz && tar -xvf upx-4.0.2-amd64_linux.tar.xz upx-4.0.2-amd64_linux/upx && mv ./upx-4.0.2-amd64_linux/upx . && ./upx --no-color --mono --no-progress --ultra-brute --no-backup ./bin/sing-box && ./upx --test ./bin/sing-box
       - name: Upload Build Artifacts
