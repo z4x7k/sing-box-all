@@ -32,41 +32,8 @@ jobs:
         id: generate_release_name
       - name: Release
         uses: softprops/action-gh-release@v1
-        id: release_try_1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ steps.generate_release_name.outputs.release_name }}"
-          prerelease: false
-          files: ./sing-box
-      - name: 'Release (Rerty: 1)'
-        uses: softprops/action-gh-release@v1
-        id: release_try_2
-        if: startsWith(github.ref, 'refs/tags/') && steps.release_try_1.output == 'failure'
-        with:
-          name: ${{ steps.generate_release_name.outputs.release_name }}"
-          prerelease: false
-          files: ./sing-box
-      - name: 'Release (Rerty: 2)'
-        uses: softprops/action-gh-release@v1
-        id: release_try_3
-        if: startsWith(github.ref, 'refs/tags/') && steps.release_try_2.output == 'failure'
-        with:
-          name: ${{ steps.generate_release_name.outputs.release_name }}"
-          prerelease: false
-          files: ./sing-box
-      - name: 'Release (Rerty: 3)'
-        uses: softprops/action-gh-release@v1
-        id: release_try_4
-        if: startsWith(github.ref, 'refs/tags/') && steps.release_try_3.output == 'failure'
-        with:
-          name: ${{ steps.generate_release_name.outputs.release_name }}"
-          prerelease: false
-          files: ./sing-box
-      - name: 'Release (Rerty: 4)'
-        uses: softprops/action-gh-release@v1
-        id: release_try_5
-        if: startsWith(github.ref, 'refs/tags/') && steps.release_try_4.output == 'failure'
-        with:
-          name: ${{ steps.generate_release_name.outputs.release_name }}"
+          name: ${{ steps.generate_release_name.outputs.release_name }}
           prerelease: false
           files: ./sing-box
