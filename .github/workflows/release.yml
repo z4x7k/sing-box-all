@@ -76,6 +76,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sing-box
+      - name: Generate Release Body
+        run: |
+          echo '# [${{ needs.build.outputs.upstream_latest_tag }}](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.build.outputs.upstream_latest_tag }})' > ./release_body.md
       - name: Release
         uses: softprops/action-gh-release@v1
         continue-on-error: true
@@ -83,7 +86,7 @@ jobs:
         with:
           name: ${{ needs.tag.outputs.release_name }}
           prerelease: false
-          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
+          body_path: ./release_body.md
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
       - name: Release (Retry 1)
@@ -93,7 +96,7 @@ jobs:
         id: release_try_1
         with:
           name: ${{ needs.tag.outputs.release_name }}
-          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
+          body_path: ./release_body.md
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
@@ -104,7 +107,7 @@ jobs:
         id: release_try_2
         with:
           name: ${{ needs.tag.outputs.release_name }}
-          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
+          body_path: ./release_body.md
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
@@ -115,7 +118,7 @@ jobs:
         id: release_try_3
         with:
           name: ${{ needs.tag.outputs.release_name }}
-          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
+          body_path: ./release_body.md
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
