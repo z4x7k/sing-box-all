@@ -1,0 +1,27 @@
+name: Tag
+on:
+  schedule:
+    - cron: "0 */8 * * *"
+  push:
+    branches:
+      - main
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate Tag Name
+        run: echo "tag_name=$(date -u '+%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+        id: generate_tag_name
+      - name: Tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fetch_all_tags: true
+          create_annotated_tag: true
+          tag_prefix: v
+          custom_tag: ${{ steps.generate_tag_name.outputs.tag_name }}
