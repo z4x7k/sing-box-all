@@ -33,7 +33,7 @@ jobs:
           create_annotated_tag: true
           tag_prefix: v
           custom_tag: ${{ steps.generate_tag_name.outputs.tag_name }}
-  release:
+  build:
     timeout-minutes: 90
     needs:
       - tag
@@ -58,8 +58,51 @@ jobs:
         with:
           name: sing-box
           path: ./sing-box
+  release:
+    timeout-minutes: 10
+    needs:
+      - tag
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sing-box
       - name: Release
         uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        id: release_try_0
+        with:
+          name: ${{ needs.tag.outputs.release_name }}
+          prerelease: false
+          tag_name: ${{ needs.tag.outputs.tag }}
+          files: ./sing-box
+      - name: Release (Retry 1)
+        uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        if: steps.release_try_0.outcome == 'failure'
+        id: release_try_1
+        with:
+          name: ${{ needs.tag.outputs.release_name }}
+          prerelease: false
+          tag_name: ${{ needs.tag.outputs.tag }}
+          files: ./sing-box
+      - name: Release (Retry 2)
+        uses: softprops/action-gh-release@v1
+        continue-on-error: true
+        if: steps.release_try_1.outcome == 'failure'
+        id: release_try_2
+        with:
+          name: ${{ needs.tag.outputs.release_name }}
+          prerelease: false
+          tag_name: ${{ needs.tag.outputs.tag }}
+          files: ./sing-box
+      - name: Release (Retry 3)
+        uses: softprops/action-gh-release@v1
+        continue-on-error: false
+        if: steps.release_try_2.outcome == 'failure'
+        id: release_try_3
         with:
           name: ${{ needs.tag.outputs.release_name }}
           prerelease: false
