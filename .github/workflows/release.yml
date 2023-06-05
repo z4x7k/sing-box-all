@@ -1,8 +1,14 @@
 name: Build And Release
 on:
+  create:
   push:
     tags:
       - "v[0-9]+"
+  # workflow_run:
+  #   workflows:
+  #     - Tag
+  #   types:
+  #     - completed
 jobs:
   main:
     timeout-minutes: 90
