@@ -43,12 +43,19 @@ jobs:
       group: ${{ format('{0}-{1}', github.event_name, github.ref_name) }}
     container:
       image: docker.io/library/golang:1-alpine
+    outputs:
+      upstream_latest_tag: ${{ steps.get_latest_tag.outputs.tag }}
     steps:
       - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache gcc musl-dev linux-headers
+        run: apk update && apk upgrade && apk add --no-cache jq gcc musl-dev linux-headers
+      - name: Get Latest Git Tag
+        id: get_latest_tag
+        run: |
+          export tag=$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/tags | jq -r '.[0].name')
+          echo "tag=$tag" >> $GITHUB_OUTPUT
       - name: Build
         run: |
-          go install -trimpath -buildvcs=false -ldflags "-extldflags '-static' -s -w -buildid=''" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@latest
+          go install -trimpath -buildvcs=false -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ steps.get_latest_tag.outputs.tag }}' -extldflags '-static' -s -w -buildid=" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@${{ steps.get_latest_tag.outputs.tag }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
         id: get_path
       - name: Compress Executable
@@ -76,6 +83,7 @@ jobs:
         with:
           name: ${{ needs.tag.outputs.release_name }}
           prerelease: false
+          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
       - name: Release (Retry 1)
@@ -85,6 +93,7 @@ jobs:
         id: release_try_1
         with:
           name: ${{ needs.tag.outputs.release_name }}
+          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
@@ -95,6 +104,7 @@ jobs:
         id: release_try_2
         with:
           name: ${{ needs.tag.outputs.release_name }}
+          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
@@ -105,6 +115,7 @@ jobs:
         id: release_try_3
         with:
           name: ${{ needs.tag.outputs.release_name }}
+          body: '# ${{ needs.build.outputs.upstream_latest_tag }}'
           prerelease: false
           tag_name: ${{ needs.tag.outputs.tag }}
           files: ./sing-box
