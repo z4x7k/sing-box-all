@@ -1,7 +1,7 @@
 name: Release
 on:
   schedule:
-    - cron: "0 8 * * *"
+    - cron: "27 */8 * * *"
   push:
     branches:
       - main
