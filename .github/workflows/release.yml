@@ -48,8 +48,8 @@ jobs:
           release_name="$upstream_latest_release_name"
           tag_name="${upstream_latest_tag_name}-1"
 
-          echo "upstream_latest_tag_name=$upstream_latest_tag_name" >> $GITHUB_OUTPUT
-          echo "upstream_latest_release_name=$upstream_latest_release_name" >> $GITHUB_OUTPUT
+          echo "upstream_tag_name=$upstream_latest_tag_name" >> $GITHUB_OUTPUT
+          echo "upstream_release_name=$upstream_latest_release_name" >> $GITHUB_OUTPUT
           echo "release_name=$release_name" >> $GITHUB_OUTPUT
 
           self_latest_release_info_json="$(wget -qO- https://github.com/${{ github.repository }}/releases/latest/download/info.json)"
