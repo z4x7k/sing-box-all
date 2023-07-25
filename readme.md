@@ -10,4 +10,4 @@ Download the latest executable and use it!
 curl -sSfLO https://github.com/z4x7k/sing-box-all/releases/latest/download/sing-box && chmod +x ./sing-box
 ```
 
-> Verify it's working using `./sing-box version` command.
+Verify it's working using `./sing-box version` command.
