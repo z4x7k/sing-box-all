@@ -1,84 +1,153 @@
-name: Release
+name: Build & Release
 on:
   schedule:
-    - cron: "27 */8 * * *"
+    - cron: "27 */4 * * *"
   push:
     branches:
       - main
+concurrency:
+  cancel-in-progress: false
+  group: ${{ format('{0}-{1}', github.event_name, github.ref_name) }}
+permissions:
+  contents: none
+  deployments: none
+  actions: none
+  checks: none
+  discussions: none
+  id-token: none
+  issues: none
+  packages: none
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
 jobs:
   tag:
+    name: Generate Tag & Release Info
+    permissions:
+      contents: write
     outputs:
-      tag: ${{ steps.tag_version.outputs.new_tag }}
-      release_name: ${{ steps.generate_tag_name.outputs.release_name }}
+      no_continue: ${{ steps.generate.outputs.no_continue }}
+      upstream_tag_name: ${{ steps.generate.outputs.upstream_tag_name }}
+      upstream_release_name: ${{ steps.generate.outputs.upstream_release_name }}
+      tag_name: ${{ steps.generate.outputs.tag_name }}
+      release_name: ${{ steps.generate.outputs.release_name }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Generate Tag Name
+      - name: Generate
+        id: generate
         run: |
-          export now=$(date -u)
-          export tag_name=$(date -d "$now" -u '+%Y%m%d%H%M')
-          export release_name=$(date -d "$now" -u '+%Y/%m/%d %H:%M UTC')
-          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+          upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/sagerNet/sing-box/releases/latest)"
+          upstream_latest_tag_name="$(jq -r '.tag_name' <<< $upstream_latest_release_json)"
+          upstream_latest_release_name="$(jq -r '.name' <<< $upstream_latest_release_json)"
+          release_name="$upstream_latest_release_name"
+          tag_name="${upstream_latest_tag_name}-1"
+
+          echo "upstream_latest_tag_name=$upstream_latest_tag_name" >> $GITHUB_OUTPUT
+          echo "upstream_latest_release_name=$upstream_latest_release_name" >> $GITHUB_OUTPUT
           echo "release_name=$release_name" >> $GITHUB_OUTPUT
-        id: generate_tag_name
-      - name: Tag
-        id: tag_version
+
+          self_latest_release_info_json="$(wget -qO- https://github.com/${{ github.repository }}/releases/latest/download/info.json)"
+          self_latest_release_tag_name="$(jq -r '.tag_name' <<< $self_latest_release_info_json)"
+          self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' <<< $self_latest_release_info_json)"
+
+          if [[ "$upstream_latest_tag_name" == "$self_latest_release_upstream_tag_name" ]]; then
+            if [[ '${{ github.event_name == 'schedule' }}' == 'true' ]]; then
+              echo 'no_continue=1' >> $GITHUB_OUTPUT
+            else
+              pkgrel="$(sed -n 's/^.*-//p' <<< $self_latest_release_tag_name)"
+              pkgrel="$((pkgrel + 1))"
+              tag_name="${upstream_latest_tag_name}-${pkgrel}"
+            fi
+          fi
+
+          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+          jq \
+            -c \
+            -n \
+            --arg tag_name "$tag_name" \
+            --arg upstream_tag_name "$upstream_latest_tag_name" \
+            --arg upstream_release_name "$upstream_latest_release_name" \
+            '{ tag_name: $tag_name, upstream: { tag_name: $upstream_tag_name, release_name: $upstream_release_name } }' > info.json
+      - name: Create Tag
+        if: steps.generate.outputs.no_continue != '1'
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fetch_all_tags: true
           create_annotated_tag: true
-          tag_prefix: v
-          custom_tag: ${{ steps.generate_tag_name.outputs.tag_name }}
+          tag_prefix: ""
+          custom_tag: ${{ steps.generate.outputs.tag_name }}
+      - name: Upload Upstream Info File
+        uses: actions/upload-artifact@v3
+        if: steps.generate.outputs.no_continue != '1'
+        with:
+          name: info.json
+          path: ./info.json
   build:
+    name: Build
+    if: needs.tag.outputs.no_continue != '1'
+    permissions:
+      contents: read
     timeout-minutes: 90
     needs:
       - tag
     runs-on: ubuntu-latest
-    concurrency:
-      cancel-in-progress: false
-      group: ${{ format('{0}-{1}', github.event_name, github.ref_name) }}
     container:
       image: docker.io/library/golang:1-alpine
-    outputs:
-      upstream_latest_tag: ${{ steps.get_latest_tag.outputs.tag }}
     steps:
       - name: Install Dependencies
         run: apk update && apk upgrade && apk add --no-cache jq gcc musl-dev linux-headers
-      - name: Get Latest Git Tag
-        id: get_latest_tag
-        run: |
-          export tag=$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/tags | jq -r '.[0].name')
-          echo "tag=$tag" >> $GITHUB_OUTPUT
       - name: Build
         run: |
-          go install -trimpath -buildvcs=false -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ steps.get_latest_tag.outputs.tag }}' -extldflags '-static' -s -w -buildid=" -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' github.com/sagernet/sing-box/cmd/sing-box@${{ steps.get_latest_tag.outputs.tag }}
+          go install \
+            -trimpath \
+            -buildvcs=false \
+            -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' \
+            -extldflags '-static' -s -w -buildid=" \
+            -tags 'with_quic with_grpc with_dhcp with_wireguard with_shadowsocksr with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
+            github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
-        id: get_path
       - name: Compress Executable
-        run: set -ex && wget https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz -O upx-4.0.2-amd64_linux.tar.xz && tar -xvf upx-4.0.2-amd64_linux.tar.xz upx-4.0.2-amd64_linux/upx && mv ./upx-4.0.2-amd64_linux/upx . && ./upx --no-color --mono --no-progress --ultra-brute --no-backup ./sing-box && ./upx --test ./sing-box
-      - name: Upload Build Artifacts
+        run: |
+          set -ex
+          wget -qO- https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz | tar -xvf - upx-4.0.2-amd64_linux/upx
+          mv ./upx-4.0.2-amd64_linux/upx .
+          ./upx --no-color --mono --no-progress --ultra-brute --no-backup ./sing-box
+          ./upx --test ./sing-box
+      - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v3
         with:
           name: sing-box
           path: ./sing-box
   release:
+    name: Release
+    if: needs.tag.outputs.no_continue != '1'
+    permissions:
+      contents: write
     timeout-minutes: 10
     needs:
       - tag
       - build
     runs-on: ubuntu-latest
     steps:
-      - name: Download Build Artifacts
+      - name: Download Executable Binary Artifact
         uses: actions/download-artifact@v3
         with:
           name: sing-box
+      - name: Download Upstream Info File Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: info.json
       - name: Generate Release Body
         run: |
-          echo '# [${{ needs.build.outputs.upstream_latest_tag }}](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.build.outputs.upstream_latest_tag }})' > ./release_body.md
+          echo '# [${{ needs.tag.outputs.upstream_release_name }}](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})' > ./release_body.md
       - name: Release
         uses: softprops/action-gh-release@v1
         continue-on-error: true
@@ -87,8 +156,10 @@ jobs:
           name: ${{ needs.tag.outputs.release_name }}
           prerelease: false
           body_path: ./release_body.md
-          tag_name: ${{ needs.tag.outputs.tag }}
-          files: ./sing-box
+          tag_name: ${{ needs.tag.outputs.tag_name }}
+          files: |
+            ./sing-box
+            ./info.json
       - name: Release (Retry 1)
         uses: softprops/action-gh-release@v1
         continue-on-error: true
@@ -98,8 +169,10 @@ jobs:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
           prerelease: false
-          tag_name: ${{ needs.tag.outputs.tag }}
-          files: ./sing-box
+          tag_name: ${{ needs.tag.outputs.tag_name }}
+          files: |
+            ./sing-box
+            ./info.json
       - name: Release (Retry 2)
         uses: softprops/action-gh-release@v1
         continue-on-error: true
@@ -109,8 +182,10 @@ jobs:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
           prerelease: false
-          tag_name: ${{ needs.tag.outputs.tag }}
-          files: ./sing-box
+          tag_name: ${{ needs.tag.outputs.tag_name }}
+          files: |
+            ./sing-box
+            ./info.json
       - name: Release (Retry 3)
         uses: softprops/action-gh-release@v1
         continue-on-error: false
@@ -120,5 +195,7 @@ jobs:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
           prerelease: false
-          tag_name: ${{ needs.tag.outputs.tag }}
-          files: ./sing-box
+          tag_name: ${{ needs.tag.outputs.tag_name }}
+          files: |
+            ./sing-box
+            ./info.json
