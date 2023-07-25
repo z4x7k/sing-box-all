@@ -103,7 +103,7 @@ jobs:
       image: docker.io/library/golang:1-alpine
     steps:
       - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache jq gcc musl-dev linux-headers
+        run: apk update && apk upgrade && apk add --no-cache jq tar xz gcc musl-dev linux-headers
       - name: Build
         run: |
           go install \
@@ -117,10 +117,14 @@ jobs:
       - name: Compress Executable
         run: |
           set -ex
-          wget -qO- https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz | tar -xvf - upx-4.0.2-amd64_linux/upx
+          temp_dir=$(mktemp -d)
+          cd "$temp_dir"
+          wget -qO- https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz | tar -xJvf - upx-4.0.2-amd64_linux/upx
           mv ./upx-4.0.2-amd64_linux/upx .
           ./upx --no-color --mono --no-progress --ultra-brute --no-backup ./sing-box
           ./upx --test ./sing-box
+          cd -
+          rm -rfv "${temp_dir}"
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v3
         with:
