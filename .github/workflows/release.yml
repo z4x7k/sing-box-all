@@ -42,7 +42,7 @@ jobs:
       - name: Generate
         id: generate
         run: |
-          upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/sagerNet/sing-box/releases/latest)"
+          upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases | jq -c '. | first')"
           upstream_latest_tag_name="$(jq -r '.tag_name' <<< $upstream_latest_release_json)"
           upstream_latest_release_name="$(jq -r '.name' <<< $upstream_latest_release_json)"
           release_name="$upstream_latest_release_name"
@@ -120,8 +120,8 @@ jobs:
           workdir=$(pwd)
           temp_dir=$(mktemp -d)
           cd "$temp_dir"
-          wget -qO- https://github.com/upx/upx/releases/download/v4.0.2/upx-4.0.2-amd64_linux.tar.xz | tar -xJvf - upx-4.0.2-amd64_linux/upx
-          mv ./upx-4.0.2-amd64_linux/upx .
+          wget -qO- https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-amd64_linux.tar.xz | tar -xJvf - upx-4.1.0-amd64_linux/upx
+          mv ./upx-4.1.0-amd64_linux/upx .
           ./upx --no-color --mono --no-progress --ultra-brute --no-backup "${workdir}/sing-box"
           ./upx --test "${workdir}/sing-box"
           cd -
@@ -152,7 +152,11 @@ jobs:
           name: info.json
       - name: Generate Release Body
         run: |
-          echo '# [${{ needs.tag.outputs.upstream_release_name }}](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})' > ./release_body.md
+          cat >./release_body.md <<EOF
+            # ${{ needs.tag.outputs.upstream_release_name }}'
+
+            [Sing-box ${{ needs.tag.outputs.upstream_release_name }} ![upstream release](https://en.wikipedia.org/w/skins/Vector/resources/common/images/link-external-small-ltr-progressive.svg?30a3a)](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})
+          EOF
       - name: Release
         uses: softprops/action-gh-release@v1
         continue-on-error: true
