@@ -153,7 +153,7 @@ jobs:
       - name: Generate Release Body
         run: |
           cat >./release_body.md <<EOF
-            # ${{ needs.tag.outputs.upstream_release_name }}'
+            # ${{ needs.tag.outputs.upstream_release_name }}
 
             [Sing-box ${{ needs.tag.outputs.upstream_release_name }} ![upstream release](https://en.wikipedia.org/w/skins/Vector/resources/common/images/link-external-small-ltr-progressive.svg?30a3a)](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})
           EOF
