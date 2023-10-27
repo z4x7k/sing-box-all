@@ -120,8 +120,8 @@ jobs:
           workdir=$(pwd)
           temp_dir=$(mktemp -d)
           cd "$temp_dir"
-          wget -qO- https://github.com/upx/upx/releases/download/v4.1.0/upx-4.1.0-amd64_linux.tar.xz | tar -xJvf - upx-4.1.0-amd64_linux/upx
-          mv ./upx-4.1.0-amd64_linux/upx .
+          wget -qO- https://github.com/upx/upx/releases/download/v4.2.0/upx-4.2.0-amd64_linux.tar.xz | tar -xJvf - upx-4.2.0-amd64_linux/upx
+          mv ./upx-4.2.0-amd64_linux/upx .
           ./upx --no-color --mono --no-progress --ultra-brute --no-backup "${workdir}/sing-box"
           ./upx --test "${workdir}/sing-box"
           cd -
