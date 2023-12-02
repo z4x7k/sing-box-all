@@ -42,7 +42,6 @@ jobs:
       - name: Generate
         id: generate
         run: |
-          set -xu
           tag="$(cat ./upstream)"
           upstream_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases/tags/${tag})"
           upstream_tag_name="$(jq -r '.tag_name' <<< $upstream_release_json)"
@@ -60,8 +59,8 @@ jobs:
 
           status="$(curl -o self_release_info.json -sw '%{http_code}' https://github.com/${{ github.repository }}/releases/download/${tag_name}/info.json)"
           if [ "$status" == '200' ] || [ "$status" == '302' ]; then
-            self_latest_release_tag_name="$(jq -r '.tag_name' $self_release_info.json)"
-            self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' $self_release_info.json)"
+            self_latest_release_tag_name="$(jq -r '.tag_name' self_release_info.json)"
+            self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' self_release_info.json)"
 
             if [[ "$upstream_tag_name" == "$self_latest_release_upstream_tag_name" ]]; then
               if [[ '${{ github.event_name == 'schedule' }}' == 'true' ]]; then
@@ -72,7 +71,7 @@ jobs:
                 tag_name="${upstream_tag_name}-${pkgrel}"
               fi
             fi
-          elif [[ "$status" != '404' ]]; then
+          elif [ "$status" != '404' ]; then
             echo "::error title=Get Self Release Info::Failed to request for self release info."
             exit 85
           fi
