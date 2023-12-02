@@ -1,11 +1,11 @@
-name: Build & Release
+name: Build & Release Upstream
 on:
   push:
     branches:
       - main
 concurrency:
   cancel-in-progress: false
-  group: ${{ format('{0}-{1}', github.event_name, github.ref_name) }}
+  group: ${{ format('{0}/{1}/{2}', github.workflow, github.ref_type, github.ref_name) }}
 permissions:
   contents: none
   deployments: none

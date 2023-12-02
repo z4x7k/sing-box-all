@@ -1,4 +1,4 @@
-name: Build & Release
+name: Build & Release Latest
 on:
   schedule:
     - cron: "27 */4 * * *"
