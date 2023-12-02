@@ -60,6 +60,7 @@ jobs:
 
           status="$(curl -o self_release_info.json -sw '%{http_code}' https://github.com/${{ github.repository }}/releases/download/${tag_name}/info.json)"
           if [ "$status" == '200' ] || [ "$status" == '302' ]; then
+            cat self_release_info.json
             self_latest_release_tag_name="$(jq -r '.tag_name' self_release_info.json)"
             self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' self_release_info.json)"
 
