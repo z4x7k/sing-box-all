@@ -58,18 +58,23 @@ jobs:
           echo "prerelease=$upstream_release_prerelease" >> $GITHUB_OUTPUT
           echo "release_name=$release_name" >> $GITHUB_OUTPUT
 
-          self_latest_release_info_json="$(wget -qO- https://github.com/${{ github.repository }}/releases/download/${tag}/info.json)"
-          self_latest_release_tag_name="$(jq -r '.tag_name' <<< $self_latest_release_info_json)"
-          self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' <<< $self_latest_release_info_json)"
+          status="$(curl -o self_release_info.json -sw '%{http_code}' https://github.com/${{ github.repository }}/releases/download/${tag}/info.json)"
+          if [[ "$status" == '200' ]]; then
+            self_latest_release_tag_name="$(jq -r '.tag_name' $self_release_info.json)"
+            self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' $self_release_info.json)"
 
-          if [[ "$upstream_tag_name" == "$self_latest_release_upstream_tag_name" ]]; then
-            if [[ '${{ github.event_name == 'schedule' }}' == 'true' ]]; then
-              echo 'no_continue=1' >> $GITHUB_OUTPUT
-            else
-              pkgrel="$(sed -n 's/^.*-//p' <<< $self_latest_release_tag_name)"
-              pkgrel="$((pkgrel + 1))"
-              tag_name="${upstream_tag_name}-${pkgrel}"
+            if [[ "$upstream_tag_name" == "$self_latest_release_upstream_tag_name" ]]; then
+              if [[ '${{ github.event_name == 'schedule' }}' == 'true' ]]; then
+                echo 'no_continue=1' >> $GITHUB_OUTPUT
+              else
+                pkgrel="$(sed -n 's/^.*-//p' <<< $self_latest_release_tag_name)"
+                pkgrel="$((pkgrel + 1))"
+                tag_name="${upstream_tag_name}-${pkgrel}"
+              fi
             fi
+          elif [[ "$status" != '404' ]]; then
+            echo "::error title=Get Self Release Info::Failed to request for self release info."
+            exit 85
           fi
 
           echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
