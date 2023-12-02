@@ -173,7 +173,8 @@ jobs:
         id: release_try_0
         with:
           name: ${{ needs.tag.outputs.release_name }}
-          prerelease: false
+          prerelease: ${{ needs.tag.outputs.prerelease }}
+          draft: ${{ needs.tag.outputs.draft }}
           body_path: ./release_body.md
           tag_name: ${{ needs.tag.outputs.tag_name }}
           files: |
@@ -187,7 +188,8 @@ jobs:
         with:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
-          prerelease: false
+          prerelease: ${{ needs.tag.outputs.prerelease }}
+          draft: ${{ needs.tag.outputs.draft }}
           tag_name: ${{ needs.tag.outputs.tag_name }}
           files: |
             ./sing-box
@@ -200,7 +202,8 @@ jobs:
         with:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
-          prerelease: false
+          prerelease: ${{ needs.tag.outputs.prerelease }}
+          draft: ${{ needs.tag.outputs.draft }}
           tag_name: ${{ needs.tag.outputs.tag_name }}
           files: |
             ./sing-box
@@ -213,7 +216,8 @@ jobs:
         with:
           name: ${{ needs.tag.outputs.release_name }}
           body_path: ./release_body.md
-          prerelease: false
+          prerelease: ${{ needs.tag.outputs.prerelease }}
+          draft: ${{ needs.tag.outputs.draft }}
           tag_name: ${{ needs.tag.outputs.tag_name }}
           files: |
             ./sing-box
