@@ -42,6 +42,7 @@ jobs:
       - name: Generate
         id: generate
         run: |
+          set -xu
           tag="$(cat ./upstream)"
           upstream_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases/tags/${tag})"
           upstream_tag_name="$(jq -r '.tag_name' <<< $upstream_release_json)"
