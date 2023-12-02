@@ -58,7 +58,7 @@ jobs:
           echo "prerelease=$upstream_release_prerelease" >> $GITHUB_OUTPUT
           echo "release_name=$release_name" >> $GITHUB_OUTPUT
 
-          self_latest_release_info_json="$(wget -qO- https://github.com/${{ github.repository }}/releases/${tag}/download/info.json)"
+          self_latest_release_info_json="$(wget -qO- https://github.com/${{ github.repository }}/releases/download/${tag}/info.json)"
           self_latest_release_tag_name="$(jq -r '.tag_name' <<< $self_latest_release_info_json)"
           self_latest_release_upstream_tag_name="$(jq -r '.upstream.tag_name' <<< $self_latest_release_info_json)"
 
