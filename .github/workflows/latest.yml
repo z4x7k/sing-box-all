@@ -149,11 +149,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download Executable Binary Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: sing-box
       - name: Download Upstream Info File Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: info.json
       - name: Generate Release Body
