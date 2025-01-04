@@ -114,16 +114,18 @@ jobs:
       image: docker.io/library/golang:1-alpine
     steps:
       - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache jq tar xz gcc musl-dev linux-headers
+        run: apk update && apk upgrade && apk add --no-cache jq tar xz clang musl-dev linux-headers
       - name: Build
+        env:
+          CC: clang
+          CXX: clang++
         run: |
           go install \
-            -trimpath \
-            -buildvcs=false \
-            -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' \
-            -extldflags '-static' -s -w -buildid=" \
-            -tags 'with_quic with_grpc with_dhcp with_wireguard with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
-            github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
+              -trimpath \
+              -buildvcs=false \
+              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' -linkmode external -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
+              -tags 'with_quic with_grpc with_dhcp with_wireguard with_ech with_utls with_reality_server with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
+              github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v4
