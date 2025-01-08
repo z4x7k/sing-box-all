@@ -2,6 +2,10 @@
 
 A custom statically-linked build of [SagerNet sing-box](https://github.com/SagerNet/sing-box/) with all tags enabled.
 
+## Compatibility
+
+Currently only `linux/amd64` is supported. In case of enough request from users, other OS/arch support can be added.
+
 ## Usage
 
 Download the latest executable and use it!
