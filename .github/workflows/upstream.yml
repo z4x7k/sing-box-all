@@ -130,11 +130,12 @@ jobs:
       - name: Compress Executable
         run: |
           set -ex
+          upx_version=5.0.1
           workdir=$(pwd)
           temp_dir=$(mktemp -d)
           cd "$temp_dir"
-          wget -qO- https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz | tar -xJvf - upx-4.2.4-amd64_linux/upx
-          mv ./upx-4.2.4-amd64_linux/upx .
+          wget -qO- "https://github.com/upx/upx/releases/download/v${upx_version}/upx-${upx_version}-amd64_linux.tar.xz" | tar -xJvf - "upx-${upx_version}-amd64_linux/upx"
+          mv "./upx-${upx_version}-amd64_linux/upx" .
           ./upx --no-color --mono --no-progress --ultra-brute --lzma --no-backup "${workdir}/sing-box"
           ./upx --test "${workdir}/sing-box"
           cd -
