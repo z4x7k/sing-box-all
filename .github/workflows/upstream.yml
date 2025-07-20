@@ -33,7 +33,7 @@ jobs:
       release_name: ${{ steps.generate.outputs.release_name }}
       draft: ${{ steps.generate.outputs.draft }}
       prerelease: ${{ steps.generate.outputs.prerelease }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,7 +109,7 @@ jobs:
     timeout-minutes: 90
     needs:
       - tag
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container:
       image: docker.io/library/golang:1-alpine
     steps:
@@ -154,7 +154,7 @@ jobs:
     needs:
       - tag
       - build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Download Executable Binary Artifact
         uses: actions/download-artifact@v4
