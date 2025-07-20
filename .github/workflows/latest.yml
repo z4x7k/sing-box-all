@@ -125,7 +125,7 @@ jobs:
       - name: Compress Executable
         run: |
           set -ex
-          upx_version=5.0.1
+          upx_version=5.0.2
           workdir=$(pwd)
           temp_dir=$(mktemp -d)
           cd "$temp_dir"
