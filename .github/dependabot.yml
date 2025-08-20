@@ -4,5 +4,9 @@ updates:
     directory: /
     schedule:
       interval: daily
-    reviewers:
-      - z4x7k
+    open-pull-requests-limit: 20
+    labels:
+      - dependabot
+      - dependencies
+      - github-actions
+      - build
