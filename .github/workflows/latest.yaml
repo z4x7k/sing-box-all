@@ -37,6 +37,10 @@ jobs:
       draft: ${{ steps.generate.outputs.draft }}
     runs-on: ubuntu-24.04
     steps:
+      - name: Debug GitHub CLI
+        run: |-
+          gh
+          gh version
       - name: Checkout
         uses: actions/checkout@v5
         with:
