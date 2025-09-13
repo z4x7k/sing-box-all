@@ -122,7 +122,7 @@ jobs:
           go install \
               -trimpath \
               -buildvcs=false \
-              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' -linkmode external -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
+              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' -linkmode external -checklinkname=0 -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
               -tags 'with_quic with_grpc with_dhcp with_wireguard with_utls with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
               github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
