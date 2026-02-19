@@ -95,7 +95,7 @@ jobs:
           tag_prefix: ""
           custom_tag: ${{ steps.generate.outputs.tag_name }}
       - name: Upload Upstream Info File
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: steps.generate.outputs.no_continue != '1'
         with:
           name: info.json
@@ -140,7 +140,7 @@ jobs:
           cd -
           rm -rfv "${temp_dir}"
       - name: Upload Executable Binary Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: sing-box
           path: ./sing-box
