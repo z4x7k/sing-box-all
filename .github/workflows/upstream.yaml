@@ -157,11 +157,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download Executable Binary Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: sing-box
       - name: Download Upstream Info File Artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: info.json
       - name: Generate Release Body
