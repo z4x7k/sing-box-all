@@ -126,19 +126,6 @@ jobs:
               -tags 'with_quic with_grpc with_dhcp with_wireguard with_utls with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
               github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
-      - name: Compress Executable
-        run: |
-          set -ex
-          upx_version=5.0.2
-          workdir=$(pwd)
-          temp_dir=$(mktemp -d)
-          cd "$temp_dir"
-          wget -qO- "https://github.com/upx/upx/releases/download/v${upx_version}/upx-${upx_version}-amd64_linux.tar.xz" | tar -xJvf - "upx-${upx_version}-amd64_linux/upx"
-          mv "./upx-${upx_version}-amd64_linux/upx" .
-          ./upx --no-color --mono --no-progress --ultra-brute --lzma --no-backup "${workdir}/sing-box"
-          ./upx --test "${workdir}/sing-box"
-          cd -
-          rm -rfv "${temp_dir}"
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v6
         with:
