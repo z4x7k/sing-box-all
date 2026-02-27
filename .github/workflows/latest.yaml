@@ -95,7 +95,7 @@ jobs:
           tag_prefix: ""
           custom_tag: ${{ steps.generate.outputs.tag_name }}
       - name: Upload Upstream Info File
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: steps.generate.outputs.no_continue != '1'
         with:
           name: info.json
@@ -127,7 +127,7 @@ jobs:
               github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
           mv "$(go env GOPATH)/bin/sing-box" ./sing-box
       - name: Upload Executable Binary Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sing-box
           path: ./sing-box
