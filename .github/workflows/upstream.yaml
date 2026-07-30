@@ -114,11 +114,12 @@ jobs:
       image: docker.io/library/golang:1-alpine
     steps:
       - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache jq tar xz clang musl-dev linux-headers
+        run: apk update && apk upgrade && apk add --no-cache jq tar xz clang lld musl-dev linux-headers build-base
       - name: Build
         env:
           CC: clang
           CXX: clang++
+          CGO_LDFLAGS: "-fuse-ld=lld"
         run: |
           go install \
               -trimpath \
