@@ -1,0 +1,87 @@
+name: Publish Release
+on:
+  workflow_call:
+    inputs:
+      tag_name:
+        required: true
+        type: string
+      release_name:
+        required: true
+        type: string
+      upstream_tag_name:
+        required: true
+        type: string
+      upstream_release_name:
+        required: true
+        type: string
+      prerelease:
+        required: true
+        type: string
+      draft:
+        required: true
+        type: string
+permissions:
+  contents: none
+  deployments: none
+  actions: none
+  checks: none
+  discussions: none
+  id-token: none
+  issues: none
+  packages: none
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+jobs:
+  publish:
+    name: Publish
+    permissions:
+      contents: write
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Executable Binary Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: sing-box
+      - name: Download Upstream Info File Artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: info.json
+      - name: Generate Release Body
+        run: |
+          cat >./release_body.md <<EOF
+            # ${{ inputs.upstream_release_name }}
+
+            [🔗 Sing-box ${{ inputs.upstream_release_name }} ↗️](https://github.com/SagerNet/sing-box/releases/tag/${{ inputs.upstream_tag_name }})
+          EOF
+      - name: Create draft release and upload assets
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ inputs.release_name }}
+          tag_name: ${{ inputs.tag_name }}
+          draft: true
+          prerelease: ${{ inputs.prerelease }}
+          make_latest: "false"
+          body_path: ./release_body.md
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true
+          files: |
+            ./sing-box
+            ./info.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish release
+        if: inputs.draft != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |-
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release edit "$TAG_NAME" --draft=false --prerelease --latest=false
+          else
+            gh release edit "$TAG_NAME" --draft=false --latest
+          fi

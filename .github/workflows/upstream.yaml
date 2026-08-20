@@ -24,7 +24,7 @@ jobs:
   tag:
     name: Generate Tag & Release Info
     permissions:
-      contents: write
+      contents: read
     outputs:
       no_continue: ${{ steps.generate.outputs.no_continue }}
       upstream_tag_name: ${{ steps.generate.outputs.upstream_tag_name }}
@@ -37,8 +37,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - name: Generate
         id: generate
         run: |
@@ -86,15 +84,6 @@ jobs:
             --arg upstream_tag_name "$upstream_tag_name" \
             --arg upstream_release_name "$upstream_release_name" \
             '{ tag_name: $tag_name, upstream: { tag_name: $upstream_tag_name, release_name: $upstream_release_name } }' > info.json
-      - name: Create Tag
-        if: steps.generate.outputs.no_continue != '1'
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          fetch_all_tags: true
-          create_annotated_tag: true
-          tag_prefix: ""
-          custom_tag: ${{ steps.generate.outputs.tag_name }}
       - name: Upload Upstream Info File
         uses: actions/upload-artifact@v7
         if: steps.generate.outputs.no_continue != '1'
@@ -151,79 +140,14 @@ jobs:
     if: needs.tag.outputs.no_continue != '1'
     permissions:
       contents: write
-    timeout-minutes: 10
     needs:
       - tag
       - build
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Download Executable Binary Artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: sing-box
-      - name: Download Upstream Info File Artifact
-        uses: actions/download-artifact@v8
-        with:
-          name: info.json
-      - name: Generate Release Body
-        run: |
-          cat >./release_body.md <<EOF
-            # ${{ needs.tag.outputs.upstream_release_name }}
-
-            [🔗 Sing-box ${{ needs.tag.outputs.upstream_release_name }} ↗️](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})
-          EOF
-      - name: Release
-        uses: softprops/action-gh-release@v3
-        continue-on-error: true
-        id: release_try_0
-        with:
-          name: ${{ needs.tag.outputs.release_name }}
-          prerelease: ${{ needs.tag.outputs.prerelease }}
-          draft: ${{ needs.tag.outputs.draft }}
-          body_path: ./release_body.md
-          tag_name: ${{ needs.tag.outputs.tag_name }}
-          files: |
-            ./sing-box
-            ./info.json
-      - name: Release (Retry 1)
-        uses: softprops/action-gh-release@v3
-        continue-on-error: true
-        if: steps.release_try_0.outcome == 'failure'
-        id: release_try_1
-        with:
-          name: ${{ needs.tag.outputs.release_name }}
-          body_path: ./release_body.md
-          prerelease: ${{ needs.tag.outputs.prerelease }}
-          draft: ${{ needs.tag.outputs.draft }}
-          tag_name: ${{ needs.tag.outputs.tag_name }}
-          files: |
-            ./sing-box
-            ./info.json
-      - name: Release (Retry 2)
-        uses: softprops/action-gh-release@v3
-        continue-on-error: true
-        if: steps.release_try_1.outcome == 'failure'
-        id: release_try_2
-        with:
-          name: ${{ needs.tag.outputs.release_name }}
-          body_path: ./release_body.md
-          prerelease: ${{ needs.tag.outputs.prerelease }}
-          draft: ${{ needs.tag.outputs.draft }}
-          tag_name: ${{ needs.tag.outputs.tag_name }}
-          files: |
-            ./sing-box
-            ./info.json
-      - name: Release (Retry 3)
-        uses: softprops/action-gh-release@v3
-        continue-on-error: false
-        if: steps.release_try_2.outcome == 'failure'
-        id: release_try_3
-        with:
-          name: ${{ needs.tag.outputs.release_name }}
-          body_path: ./release_body.md
-          prerelease: ${{ needs.tag.outputs.prerelease }}
-          draft: ${{ needs.tag.outputs.draft }}
-          tag_name: ${{ needs.tag.outputs.tag_name }}
-          files: |
-            ./sing-box
-            ./info.json
+    uses: ./.github/workflows/publish-release.yaml
+    with:
+      tag_name: ${{ needs.tag.outputs.tag_name }}
+      release_name: ${{ needs.tag.outputs.release_name }}
+      upstream_tag_name: ${{ needs.tag.outputs.upstream_tag_name }}
+      upstream_release_name: ${{ needs.tag.outputs.upstream_release_name }}
+      prerelease: ${{ needs.tag.outputs.prerelease }}
+      draft: ${{ needs.tag.outputs.draft }}
