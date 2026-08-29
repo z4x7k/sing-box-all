@@ -85,15 +85,6 @@ jobs:
             --arg upstream_tag_name "$upstream_latest_tag_name" \
             --arg upstream_release_name "$upstream_latest_release_name" \
             '{ tag_name: $tag_name, upstream: { tag_name: $upstream_tag_name, release_name: $upstream_release_name } }' > info.json
-      - name: Create Tag
-        if: steps.generate.outputs.no_continue != '1'
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          fetch_all_tags: true
-          create_annotated_tag: true
-          tag_prefix: ""
-          custom_tag: ${{ steps.generate.outputs.tag_name }}
       - name: Upload Upstream Info File
         uses: actions/upload-artifact@v7
         if: steps.generate.outputs.no_continue != '1'
