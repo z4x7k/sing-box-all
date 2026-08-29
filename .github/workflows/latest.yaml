@@ -158,21 +158,20 @@ jobs:
 
             [🔗 Sing-box ${{ needs.tag.outputs.upstream_release_name }} ↗️](https://github.com/SagerNet/sing-box/releases/tag/${{ needs.tag.outputs.upstream_tag_name }})
           EOF
-      - name: Create draft release and upload assets
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ needs.tag.outputs.release_name }}
+          tag_name: ${{ needs.tag.outputs.tag_name }}
+          draft: true
+          prerelease: ${{ needs.tag.outputs.prerelease }}
+          make_latest: ${{ needs.tag.outputs.prerelease != 'true' && 'true' || 'false' }}
+          body_path: ./release_body.md
+          files: |
+            ./sing-box
+            ./info.json
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ needs.tag.outputs.tag_name }}
-          RELEASE_NAME: ${{ needs.tag.outputs.release_name }}
-          PRERELEASE: ${{ needs.tag.outputs.prerelease }}
-        run: |-
-          set -ex
-          args=(--draft --title "${RELEASE_NAME}" --notes-file ./release_body.md)
-          if [[ "${PRERELEASE}" == 'true' ]]; then
-            args+=(--prerelease)
-          fi
-          # Tag already exists from the tag job — omit --target so GITHUB_TOKEN
-          # does not need workflows:write when the commit touches .github/workflows.
-          gh release create "${TAG_NAME}" "${args[@]}" ./sing-box ./info.json
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish prerelease
         if: needs.tag.outputs.prerelease == 'true'
         run: gh release edit "${TAG_NAME}" --draft=false --prerelease
@@ -181,7 +180,7 @@ jobs:
           TAG_NAME: ${{ needs.tag.outputs.tag_name }}
       - name: Publish release
         if: needs.tag.outputs.prerelease != 'true'
-        run: gh release edit "${TAG_NAME}" --draft=false --latest
+        run: gh release edit "${TAG_NAME}" --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG_NAME: ${{ needs.tag.outputs.tag_name }}
