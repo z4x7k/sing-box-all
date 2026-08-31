@@ -50,6 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          env
           gh run cancel
           upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases | jq -c '. | first')"
           upstream_latest_tag_name="$(jq -r '.tag_name' <<< $upstream_latest_release_json)"
