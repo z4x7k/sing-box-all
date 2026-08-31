@@ -27,6 +27,7 @@ jobs:
     name: Generate Tag & Release Info
     permissions:
       contents: write
+      actions: write
     outputs:
       no_continue: ${{ steps.generate.outputs.no_continue }}
       upstream_tag_name: ${{ steps.generate.outputs.upstream_tag_name }}
