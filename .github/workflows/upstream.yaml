@@ -25,6 +25,7 @@ jobs:
     name: Generate Tag & Release Info
     permissions:
       contents: write
+      actions: write
     outputs:
       no_continue: ${{ steps.generate.outputs.no_continue }}
       upstream_tag_name: ${{ steps.generate.outputs.upstream_tag_name }}
@@ -41,6 +42,8 @@ jobs:
           fetch-depth: 0
       - name: Generate
         id: generate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set +e
           tag="$(cat ./upstream)"
@@ -78,6 +81,13 @@ jobs:
           fi
 
           echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+          if existing_release="$(gh release view "$tag_name" --json isDraft 2>/dev/null)"; then
+            if [[ "$(jq -r '.isDraft' <<< "$existing_release")" == "false" ]]; then
+              echo "::notice title=Release already published::${tag_name} is already published and immutable; skipping build."
+              gh run cancel "$GITHUB_RUN_ID"
+            fi
+          fi
 
           jq \
             -c \

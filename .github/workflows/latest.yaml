@@ -51,7 +51,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh run cancel "$GITHUB_RUN_ID"
           upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases | jq -c '. | first')"
           upstream_latest_tag_name="$(jq -r '.tag_name' <<< $upstream_latest_release_json)"
           upstream_latest_release_name="$(jq -r '.name' <<< $upstream_latest_release_json)"
@@ -81,6 +80,13 @@ jobs:
           fi
 
           echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+
+          if existing_release="$(gh release view "$tag_name" --json isDraft 2>/dev/null)"; then
+            if [[ "$(jq -r '.isDraft' <<< "$existing_release")" == "false" ]]; then
+              echo "::notice title=Release already published::${tag_name} is already published and immutable; skipping build."
+              gh run cancel "$GITHUB_RUN_ID"
+            fi
+          fi
 
           jq \
             -c \
