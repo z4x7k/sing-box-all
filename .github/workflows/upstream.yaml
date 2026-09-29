@@ -34,7 +34,7 @@ jobs:
       release_name: ${{ steps.generate.outputs.release_name }}
       draft: ${{ steps.generate.outputs.draft }}
       prerelease: ${{ steps.generate.outputs.prerelease }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -114,7 +114,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -157,7 +157,7 @@ jobs:
     needs:
       - tag
       - build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
