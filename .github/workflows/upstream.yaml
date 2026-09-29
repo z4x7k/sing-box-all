@@ -103,32 +103,31 @@ jobs:
           name: info.json
           path: ./info.json
   build:
-    name: Build
+    name: Build (${{ matrix.arch }})
     if: needs.tag.outputs.no_continue != '1'
     permissions:
       contents: read
     timeout-minutes: 90
     needs:
       - tag
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
     runs-on: ubuntu-24.04
-    container:
-      image: docker.io/library/golang:1.27.1-alpine
     steps:
-      - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache jq tar xz clang lld musl-dev linux-headers build-base
+      - name: Checkout
+        uses: actions/checkout@v7
       - name: Build
         env:
-          CC: clang
-          CXX: clang++
-          CGO_LDFLAGS: "-fuse-ld=lld"
+          UPSTREAM_TAG: ${{ needs.tag.outputs.upstream_tag_name }}
         run: |
-          go install \
-              -trimpath \
-              -buildvcs=false \
-              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' -linkmode external -checklinkname=0 -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
-              -tags 'with_quic with_grpc with_dhcp with_wireguard with_utls with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
-              github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
-          mv "$(go env GOPATH)/bin/sing-box" ./sing-box
+          docker buildx build \
+            --platform linux/${{ matrix.arch }} \
+            --build-arg UPSTREAM_TAG \
+            --file .github/build.Dockerfile \
+            --output type=local,dest=dist \
+            .github
       - name: Compress Executable
         run: |
           set -ex
@@ -138,15 +137,30 @@ jobs:
           cd "$temp_dir"
           wget -qO- "https://github.com/upx/upx/releases/download/v${upx_version}/upx-${upx_version}-amd64_linux.tar.xz" | tar -xJvf - "upx-${upx_version}-amd64_linux/upx"
           mv "./upx-${upx_version}-amd64_linux/upx" .
-          ./upx --no-color --mono --no-progress --ultra-brute --lzma --no-backup "${workdir}/sing-box"
-          ./upx --test "${workdir}/sing-box"
+          ./upx --no-color --mono --no-progress --ultra-brute --lzma --no-backup "${workdir}/dist/sing-box-${{ matrix.arch }}"
+          ./upx --test "${workdir}/dist/sing-box-${{ matrix.arch }}"
           cd -
           rm -rfv "${temp_dir}"
+      - name: Install ARM64 Emulator
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-user
+      - name: Verify Executable
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          if [ "$TARGET_ARCH" = arm64 ]; then
+            qemu-aarch64 "./dist/sing-box-${TARGET_ARCH}" version
+          else
+            "./dist/sing-box-${TARGET_ARCH}" version
+          fi
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: sing-box
-          path: ./sing-box
+          name: sing-box-${{ matrix.arch }}
+          path: ./dist/sing-box-${{ matrix.arch }}
+          if-no-files-found: error
   release:
     name: Release
     if: needs.tag.outputs.no_continue != '1'
@@ -162,10 +176,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Download Executable Binary Artifact
+      - name: Download Executable Binary Artifacts
         uses: actions/download-artifact@v8
         with:
-          name: sing-box
+          pattern: sing-box-*
+          merge-multiple: true
       - name: Download Upstream Info File Artifact
         uses: actions/download-artifact@v8
         with:
@@ -187,7 +202,8 @@ jobs:
           make_latest: ${{ needs.tag.outputs.prerelease != 'true' && 'true' || 'false' }}
           body_path: ./release_body.md
           files: |
-            ./sing-box
+            ./sing-box-amd64
+            ./sing-box-arm64
             ./info.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
