@@ -50,7 +50,7 @@ jobs:
         id: generate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+        run: |-
           upstream_latest_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases | jq -c '. | first')"
           upstream_latest_tag_name="$(jq -r '.tag_name' <<< $upstream_latest_release_json)"
           upstream_latest_release_name="$(jq -r '.name' <<< $upstream_latest_release_json)"
@@ -120,7 +120,7 @@ jobs:
       - name: Build
         env:
           UPSTREAM_TAG: ${{ needs.tag.outputs.upstream_tag_name }}
-        run: |
+        run: |-
           docker buildx build \
             --platform linux/${{ matrix.arch }} \
             --build-arg UPSTREAM_TAG \
@@ -129,13 +129,13 @@ jobs:
             .github
       - name: Install ARM64 Emulator
         if: matrix.arch == 'arm64'
-        run: |
+        run: |-
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
       - name: Verify Executable
         env:
           TARGET_ARCH: ${{ matrix.arch }}
-        run: |
+        run: |-
           if [ "$TARGET_ARCH" = arm64 ]; then
             qemu-aarch64 "./dist/sing-box-${TARGET_ARCH}" version
           else
@@ -172,7 +172,7 @@ jobs:
         with:
           name: info.json
       - name: Generate Release Body
-        run: |
+        run: |-
           cat >./release_body.md <<EOF
             # ${{ needs.tag.outputs.upstream_release_name }}
 

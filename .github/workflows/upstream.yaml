@@ -44,7 +44,7 @@ jobs:
         id: generate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
+        run: |-
           set +e
           tag="$(cat ./upstream)"
           upstream_release_json="$(wget -qO- https://api.github.com/repos/SagerNet/sing-box/releases/tags/${tag})"
@@ -121,35 +121,22 @@ jobs:
       - name: Build
         env:
           UPSTREAM_TAG: ${{ needs.tag.outputs.upstream_tag_name }}
-        run: |
+        run: |-
           docker buildx build \
             --platform linux/${{ matrix.arch }} \
             --build-arg UPSTREAM_TAG \
             --file .github/build.Dockerfile \
             --output type=local,dest=dist \
             .github
-      - name: Compress Executable
-        run: |
-          set -ex
-          upx_version=5.0.2
-          workdir=$(pwd)
-          temp_dir=$(mktemp -d)
-          cd "$temp_dir"
-          wget -qO- "https://github.com/upx/upx/releases/download/v${upx_version}/upx-${upx_version}-amd64_linux.tar.xz" | tar -xJvf - "upx-${upx_version}-amd64_linux/upx"
-          mv "./upx-${upx_version}-amd64_linux/upx" .
-          ./upx --no-color --mono --no-progress --ultra-brute --lzma --no-backup "${workdir}/dist/sing-box-${{ matrix.arch }}"
-          ./upx --test "${workdir}/dist/sing-box-${{ matrix.arch }}"
-          cd -
-          rm -rfv "${temp_dir}"
       - name: Install ARM64 Emulator
         if: matrix.arch == 'arm64'
-        run: |
+        run: |-
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-user
       - name: Verify Executable
         env:
           TARGET_ARCH: ${{ matrix.arch }}
-        run: |
+        run: |-
           if [ "$TARGET_ARCH" = arm64 ]; then
             qemu-aarch64 "./dist/sing-box-${TARGET_ARCH}" version
           else
@@ -186,7 +173,7 @@ jobs:
         with:
           name: info.json
       - name: Generate Release Body
-        run: |
+        run: |-
           cat >./release_body.md <<EOF
             # ${{ needs.tag.outputs.upstream_release_name }}
 
@@ -201,7 +188,7 @@ jobs:
           prerelease: ${{ needs.tag.outputs.prerelease }}
           make_latest: ${{ needs.tag.outputs.prerelease != 'true' && 'true' || 'false' }}
           body_path: ./release_body.md
-          files: |
+          files: |-
             ./sing-box-amd64
             ./sing-box-arm64
             ./info.json
