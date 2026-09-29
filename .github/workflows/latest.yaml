@@ -102,37 +102,59 @@ jobs:
           name: info.json
           path: ./info.json
   build:
-    name: Build
+    name: Build (${{ matrix.arch }})
     if: needs.tag.outputs.no_continue != '1'
     permissions:
       contents: read
     timeout-minutes: 90
     needs:
       - tag
-    runs-on: ubuntu-24.04
-    container:
-      image: docker.io/library/golang:1.27.1-alpine
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-26.04
+            binary: sing-box-amd64
+          - arch: arm64
+            runner: ubuntu-26.04-arm64
+            binary: sing-box-arm64
+    runs-on: ${{ matrix.runner }}
     steps:
-      - name: Install Dependencies
-        run: apk update && apk upgrade && apk add --no-cache jq tar xz clang lld musl-dev linux-headers build-base
       - name: Build
         env:
+          UPSTREAM_TAG: ${{ needs.tag.outputs.upstream_tag_name }}
+          BINARY_NAME: ${{ matrix.binary }}
           CC: clang
           CXX: clang++
           CGO_LDFLAGS: "-fuse-ld=lld"
+        # Keep JavaScript artifact actions on the host: Alpine ARM64 is unsupported.
         run: |
+          docker run --rm -i \
+            --volume "$PWD:/workspace" \
+            --workdir /workspace \
+            --env UPSTREAM_TAG --env BINARY_NAME \
+            --env CC --env CXX --env CGO_LDFLAGS \
+            --env "OUTPUT_OWNER=$(id -u):$(id -g)" \
+            docker.io/library/golang:1.27.1-alpine sh -eu <<'BUILD'
+          apk update && apk upgrade && apk add --no-cache jq tar xz clang lld musl-dev linux-headers build-base
           go install \
               -trimpath \
               -buildvcs=false \
-              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${{ needs.tag.outputs.upstream_tag_name }}' -linkmode external -checklinkname=0 -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
+              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${UPSTREAM_TAG}' -linkmode external -checklinkname=0 -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
               -tags 'with_quic with_grpc with_dhcp with_wireguard with_utls with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
-              github.com/sagernet/sing-box/cmd/sing-box@${{ needs.tag.outputs.upstream_tag_name }}
-          mv "$(go env GOPATH)/bin/sing-box" ./sing-box
+              "github.com/sagernet/sing-box/cmd/sing-box@${UPSTREAM_TAG}"
+          mv "$(go env GOPATH)/bin/sing-box" "./${BINARY_NAME}"
+          chown "$OUTPUT_OWNER" "./${BINARY_NAME}"
+          BUILD
+      - name: Verify Executable
+        run: ./${{ matrix.binary }} version
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: sing-box
-          path: ./sing-box
+          name: sing-box-${{ matrix.arch }}
+          path: ./${{ matrix.binary }}
+          if-no-files-found: error
   release:
     name: Release
     if: needs.tag.outputs.no_continue != '1'
@@ -148,10 +170,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Download Executable Binary Artifact
+      - name: Download Executable Binary Artifacts
         uses: actions/download-artifact@v8
         with:
-          name: sing-box
+          pattern: sing-box-*
+          merge-multiple: true
       - name: Download Upstream Info File Artifact
         uses: actions/download-artifact@v8
         with:
@@ -173,7 +196,8 @@ jobs:
           make_latest: ${{ needs.tag.outputs.prerelease != 'true' && 'true' || 'false' }}
           body_path: ./release_body.md
           files: |
-            ./sing-box
+            ./sing-box-amd64
+            ./sing-box-arm64
             ./info.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
