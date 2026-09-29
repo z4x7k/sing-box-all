@@ -112,48 +112,40 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: amd64
-            runner: ubuntu-26.04
-            binary: sing-box-amd64
-          - arch: arm64
-            runner: ubuntu-26.04-arm64
-            binary: sing-box-arm64
-    runs-on: ${{ matrix.runner }}
+        arch: [amd64, arm64]
+    runs-on: ubuntu-24.04
     steps:
+      - name: Checkout
+        uses: actions/checkout@v7
       - name: Build
         env:
           UPSTREAM_TAG: ${{ needs.tag.outputs.upstream_tag_name }}
-          BINARY_NAME: ${{ matrix.binary }}
-          CC: clang
-          CXX: clang++
-          CGO_LDFLAGS: "-fuse-ld=lld"
-        # Keep JavaScript artifact actions on the host: Alpine ARM64 is unsupported.
         run: |
-          docker run --rm -i \
-            --volume "$PWD:/workspace" \
-            --workdir /workspace \
-            --env UPSTREAM_TAG --env BINARY_NAME \
-            --env CC --env CXX --env CGO_LDFLAGS \
-            --env "OUTPUT_OWNER=$(id -u):$(id -g)" \
-            docker.io/library/golang:1.27.1-alpine sh -eu <<'BUILD'
-          apk update && apk upgrade && apk add --no-cache jq tar xz clang lld musl-dev linux-headers build-base
-          go install \
-              -trimpath \
-              -buildvcs=false \
-              -ldflags "-X 'github.com/sagernet/sing-box/constant.Version=${UPSTREAM_TAG}' -linkmode external -checklinkname=0 -extldflags=-static -s -compressdwarf=true -w -buildid=''" \
-              -tags 'with_quic with_grpc with_dhcp with_wireguard with_utls with_acme with_clash_api with_v2ray_api with_gvisor with_embedded_tor with_lwip staticOpenssl staticZlib staticLibevent' \
-              "github.com/sagernet/sing-box/cmd/sing-box@${UPSTREAM_TAG}"
-          mv "$(go env GOPATH)/bin/sing-box" "./${BINARY_NAME}"
-          chown "$OUTPUT_OWNER" "./${BINARY_NAME}"
-          BUILD
+          docker buildx build \
+            --platform linux/${{ matrix.arch }} \
+            --build-arg UPSTREAM_TAG \
+            --file .github/build.Dockerfile \
+            --output type=local,dest=dist \
+            .github
+      - name: Install ARM64 Emulator
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-user
       - name: Verify Executable
-        run: ./${{ matrix.binary }} version
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          if [ "$TARGET_ARCH" = arm64 ]; then
+            qemu-aarch64 "./dist/sing-box-${TARGET_ARCH}" version
+          else
+            "./dist/sing-box-${TARGET_ARCH}" version
+          fi
       - name: Upload Executable Binary Artifact
         uses: actions/upload-artifact@v7
         with:
           name: sing-box-${{ matrix.arch }}
-          path: ./${{ matrix.binary }}
+          path: ./dist/sing-box-${{ matrix.arch }}
           if-no-files-found: error
   release:
     name: Release
