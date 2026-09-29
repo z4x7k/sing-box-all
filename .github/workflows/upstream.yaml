@@ -85,7 +85,7 @@ jobs:
           if existing_release="$(gh release view "$tag_name" --json isDraft 2>/dev/null)"; then
             if [[ "$(jq -r '.isDraft' <<< "$existing_release")" == "false" ]]; then
               echo "::notice title=Release already published::${tag_name} is already published and immutable; skipping build."
-              gh run cancel "$GITHUB_RUN_ID"
+              #gh run cancel "$GITHUB_RUN_ID"
             fi
           fi
 
